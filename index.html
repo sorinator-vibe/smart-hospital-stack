@@ -339,7 +339,7 @@
     ready:    { name: "Ready systems", verb: "Gets connectable", kind: "concept",
                 q: "Can each department's systems publish clean, real-time data?" },
     physical: { name: "Physical", verb: "Existing assets", kind: "existing",
-                body: "Robot fleets, patient transfer devices and wheelchairs, staff, elevators, doors, RTLS." },
+                body: "Robot fleets, patient transfer devices and wheelchairs, staff, elevators, doors, security cameras, alarms, RTLS." },
   };
   const ORDER = ["demand", "crew", "pm", "prior", "hub", "ready", "physical"];
 
@@ -354,7 +354,7 @@
     { from: "crew",   to: "physical", type: "work", label: "Errands for staff runners" },
     { from: "pm",     to: "physical", type: "work", label: "Trained staff and a free device" },
     { from: "physical", to: "hub",    type: "data", label: "Robot and device telemetry" },
-    { from: "physical", to: "ready",  type: "data", label: "Building and location signals" },
+    { from: "physical", to: "ready",  type: "data", label: "Building, location, camera and alarm signals" },
     { from: "demand", to: "ready",    type: "data", label: "EHR triggers and schedules" },
     { from: "ready",  to: "hub",      type: "data", label: "Clean, real-time source data" },
     { from: "hub",    to: "prior",    type: "data", label: "Live state of fleets and buildings" },
@@ -690,50 +690,299 @@
   const cyl = (r, h, n) => new T.CylinderGeometry(r, r, h, n || 20);
   const B = () => symMats.body, A = () => symMats.accent;
 
+  // ---------- Physical layer: high-fidelity assets ----------
+  // Modelled in real-world metres (after the OR and SPD floor views), then scaled onto the layer.
+  // One neutral "architectural model" palette: form carries the detail, not color.
+  const PM = {};
+  const PHYS_TONES = {
+    shell: [0xf3f4f6, 0.42, 0.1], shell2: [0xdfe3e8, 0.5, 0.08], trim: [0x3a3f47, 0.55, 0.3],
+    metal: [0xbac0c7, 0.34, 0.6], glass: [0x16191e, 0.2, 0.45], tire: [0x24272c, 0.92, 0],
+    cush: [0xc8cdd4, 0.82, 0], cloth: [0x9aa4b0, 0.86, 0], cloth2: [0x7d8692, 0.88, 0],
+    skin: [0xdcd7d1, 0.7, 0], hair: [0x5b5f66, 0.8, 0], interior: [0x2c3036, 0.9, 0],
+  };
+  Object.keys(PHYS_TONES).forEach((k) => {
+    const [, r, m] = PHYS_TONES[k];
+    PM[k] = new T.MeshStandardMaterial({ roughness: r, metalness: m, transparent: true });
+  });
+  function paintPhys() { Object.keys(PHYS_TONES).forEach((k) => paint(PM[k], PHYS_TONES[k][0])); }
+
+  const Mx = (geo, mat, x, y, z) => { const m = new T.Mesh(geo, mat); m.position.set(x || 0, y || 0, z || 0); return m; };
+  const box = (w, h, d, mat, x, y, z) => Mx(new T.BoxGeometry(w, h, d), mat, x, y, z);
+  const cyl2 = (rt, rb, h, mat, n, x, y, z) => Mx(new T.CylinderGeometry(rt, rb, h, n || 20), mat, x, y, z);
+  const sph = (r, mat, x, y, z) => Mx(new T.SphereGeometry(r, 20, 14), mat, x, y, z);
+  // plan-rounded plate with its base at y = 0 (like the floor views' slab helper)
+  function plate(w, d, h, r, mat) {
+    const bv = Math.min(0.012, h / 3);
+    const g = new T.ExtrudeGeometry(roundedRect(w - 2 * bv, d - 2 * bv, Math.max(0.004, r - bv)),
+      { depth: Math.max(0.001, h - 2 * bv), bevelEnabled: true, bevelThickness: bv, bevelSize: bv, bevelSegments: 2, curveSegments: 12 });
+    g.rotateX(-Math.PI / 2); g.translate(0, bv, 0);
+    return new T.Mesh(g, mat);
+  }
+  const at = (o, x, y, z) => { o.position.set(x, y, z); return o; };
+  function wheelX(r, w, x, y, z, hubR) {          // axle along x
+    const g = new T.Group();
+    const t = cyl2(r, r, w, PM.tire, 26); t.rotation.z = Math.PI / 2; g.add(t);
+    const h = cyl2(r * (hubR || 0.5), r * (hubR || 0.5), w + 0.01, PM.metal, 18); h.rotation.z = Math.PI / 2; g.add(h);
+    g.position.set(x, y, z); return g;
+  }
+  function caster(x, z, r) {
+    const g = new T.Group(); r = r || 0.045;
+    g.add(box(0.05, 0.07, 0.05, PM.trim, 0, r + 0.05, 0));
+    g.add(cyl2(0.014, 0.014, 0.05, PM.metal, 8, 0, r + 0.1, 0));
+    const w = cyl2(r, r, 0.035, PM.tire, 16, 0, r, 0); w.rotation.z = Math.PI / 2; g.add(w);
+    g.position.set(x, 0, z); return g;
+  }
+
+  // Autonomous mobile robot with a tote module (MiR-class base)
+  function makeAMR() {
+    const g = new T.Group(), W = 0.78, D = 1.04;
+    g.add(at(plate(W, D, 0.12, 0.1, PM.trim), 0, 0.03, 0));
+    g.add(at(plate(W - 0.02, D - 0.02, 0.3, 0.12, PM.shell), 0, 0.15, 0));
+    g.add(at(plate(W + 0.012, D + 0.012, 0.04, 0.12, PM.glass), 0, 0.38, 0));        // sensor band
+    g.add(at(plate(W - 0.12, D - 0.12, 0.05, 0.1, PM.shell2), 0, 0.45, 0));
+    [-1, 1].forEach((sx) => g.add(wheelX(0.12, 0.06, sx * (W / 2 - 0.01), 0.12, 0)));
+    [-1, 1].forEach((sz) => g.add(caster(0, sz * (D / 2 - 0.12))));
+    [[-1, 1], [1, -1]].forEach(([sx, sz]) => {                                        // diagonal LiDAR pucks
+      const x = sx * (W / 2 - 0.07), z = sz * (D / 2 - 0.07);
+      g.add(cyl2(0.072, 0.082, 0.05, PM.trim, 18, x, 0.3, z));
+      g.add(cyl2(0.062, 0.062, 0.05, PM.glass, 18, x, 0.35, z));
+      g.add(cyl2(0.078, 0.066, 0.03, PM.shell2, 18, x, 0.39, z));
+    });
+    const es = cyl2(0.03, 0.03, 0.02, PM.trim, 14, W / 2 - 0.12, 0.34, D / 2 - 0.01); es.rotation.x = Math.PI / 2; g.add(es);
+    // tote rack on top
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => g.add(cyl2(0.014, 0.014, 0.36, PM.metal, 8, sx * 0.3, 0.68, sz * 0.42)));
+    g.add(at(plate(0.66, 0.9, 0.02, 0.04, PM.metal), 0, 0.86, 0));
+    [-0.2, 0.2].forEach((z) => g.add(at(plate(0.5, 0.36, 0.2, 0.03, PM.cush), 0, 0.5, z)));
+    g.add(at(plate(0.5, 0.78, 0.16, 0.03, PM.shell2), 0, 0.88, 0));
+    return g;
+  }
+
+  // Wire supply cart with bins (exchange-cart style)
+  function makeCart() {
+    const g = new T.Group(), W = 0.6, D = 0.86, ph = 1.04;
+    g.add(box(W, 0.1, D, PM.trim, 0, 0.12, 0));
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
+      g.add(cyl2(0.018, 0.018, ph, PM.metal, 10, sx * (W / 2 - 0.04), 0.12 + ph / 2, sz * (D / 2 - 0.05)));
+      g.add(caster(sx * (W / 2 - 0.06), sz * (D / 2 - 0.08), 0.04));
+    });
+    [0.18, 0.52, 0.86, 1.12].forEach((y, i) => g.add(box(W, 0.022, D, i === 0 ? PM.shell : PM.metal, 0, y, 0)));
+    const bin = (x, z, y, w, d, h, m) => { g.add(box(w, h, d, m, x, y + h / 2, z)); g.add(box(w + 0.01, 0.02, d + 0.01, PM.shell, x, y + h + 0.01, z)); };
+    bin(-0.13, 0, 0.2, 0.26, 0.66, 0.27, PM.cush); bin(0.16, -0.18, 0.2, 0.22, 0.28, 0.25, PM.cloth); bin(0.16, 0.16, 0.2, 0.22, 0.28, 0.25, PM.cush);
+    bin(-0.12, 0, 0.55, 0.3, 0.66, 0.22, PM.cloth); bin(0.17, 0, 0.55, 0.2, 0.5, 0.2, PM.cush);
+    g.add(box(0.46, 0.14, 0.66, PM.shell2, 0, 0.96, 0));
+    const handle = cyl2(0.018, 0.018, W - 0.08, PM.metal, 10, 0, 1.06, D / 2 + 0.04); handle.rotation.z = Math.PI / 2; g.add(handle);
+    [-1, 1].forEach((sx) => { const b = cyl2(0.014, 0.014, 0.08, PM.metal, 8, sx * (W / 2 - 0.06), 1.06, D / 2 + 0.005); b.rotation.x = Math.PI / 2; g.add(b); });
+    return g;
+  }
+
+  // Hospital bed: lift frame, articulated deck with head raised, boards, rails and pillow
+  function makeBed() {
+    const g = new T.Group(), L = 2.1, Wd = 0.98;                                        // long axis on z
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => g.add(caster(sx * 0.38, sz * 0.9, 0.06)));
+    g.add(box(0.78, 0.08, 1.9, PM.trim, 0, 0.2, 0));
+    [-0.5, 0.5].forEach((z) => g.add(box(0.3, 0.26, 0.24, PM.shell2, 0, 0.36, z)));        // lift columns
+    g.add(at(plate(0.9, 2.0, 0.07, 0.04, PM.shell2), 0, 0.5, 0));
+    g.add(at(plate(0.86, 1.25, 0.15, 0.06, PM.cush), 0, 0.57, 0.33));                   // foot + seat section
+    const back = new T.Group(); back.position.set(0, 0.6, -0.3); back.rotation.x = 0.5; g.add(back);   // raised back section
+    back.add(at(plate(0.86, 0.72, 0.15, 0.06, PM.cush), 0, -0.04, -0.36));
+    const pillow = sph(0.2, PM.shell, 0, 0.14, -0.55); pillow.scale.set(1.6, 0.35, 0.8); back.add(pillow);
+    const board = (z, h) => { const b = new T.Mesh(rbox(Wd, h, 0.06, 0.06), PM.shell); b.position.set(0, 0.52 + h / 2, z); g.add(b);
+      g.add(box(Wd - 0.12, 0.03, 0.065, PM.trim, 0, 0.52 + h - 0.06, z)); };
+    board(-L / 2 + 0.03, 0.62); board(L / 2 - 0.03, 0.44);
+    [-1, 1].forEach((sx) => {                                                          // split side rails
+      [[-0.55, 0.62], [0.35, 0.7]].forEach(([z, len]) => {
+        const r = new T.Mesh(rbox(0.03, 0.2, len, 0.04), PM.metal); r.position.set(sx * 0.47, 0.82, z); g.add(r);
+      });
+    });
+    const pend = box(0.07, 0.12, 0.03, PM.glass, 0.49, 0.78, 0.1); g.add(pend);
+    return g;
+  }
+
+  // Power wheelchair (personal-mobility style): omni front wheels, drive wheels, seat, backrest, armrest controller
+  function makeWheelchair() {
+    const g = new T.Group();
+    g.add(at(plate(0.5, 0.82, 0.14, 0.1, PM.trim), 0, 0.12, 0));
+    g.add(at(plate(0.56, 0.6, 0.12, 0.08, PM.shell), 0, 0.24, -0.04));
+    [-1, 1].forEach((s) => {
+      const omni = new T.Mesh(new T.TorusGeometry(0.11, 0.028, 10, 28), PM.tire); omni.rotation.y = Math.PI / 2; omni.position.set(s * 0.29, 0.135, 0.27); g.add(omni);
+      const hub = cyl2(0.07, 0.07, 0.05, PM.metal, 18, s * 0.29, 0.135, 0.27); hub.rotation.z = Math.PI / 2; g.add(hub);
+      g.add(box(0.09, 0.03, 0.14, PM.shell, s * 0.29, 0.29, 0.27));
+      g.add(wheelX(0.125, 0.07, s * 0.255, 0.125, -0.28, 0.6));
+    });
+    g.add(at(plate(0.3, 0.34, 0.08, 0.05, PM.shell), 0, 0.36, -0.06));
+    g.add(at(plate(0.46, 0.46, 0.03, 0.06, PM.shell), 0, 0.44, -0.02));
+    g.add(at(plate(0.44, 0.44, 0.07, 0.07, PM.cush), 0, 0.47, -0.02));
+    const back = new T.Group(); back.position.set(0, 0.5, -0.24); back.rotation.x = -0.09; g.add(back);
+    [-1, 1].forEach((s) => back.add(cyl2(0.014, 0.014, 0.5, PM.metal, 10, s * 0.16, 0.26, 0.02)));
+    const shellB = new T.Mesh(rbox(0.44, 0.52, 0.05, 0.06), PM.shell); shellB.position.set(0, 0.3, -0.04); back.add(shellB);
+    const cushB = new T.Mesh(rbox(0.4, 0.48, 0.05, 0.06), PM.cush); cushB.position.set(0, 0.3, 0.01); back.add(cushB);
+    [-1, 1].forEach((s) => {                                                           // armrests + joystick
+      g.add(box(0.07, 0.04, 0.4, PM.shell, s * 0.25, 0.7, 0.0));
+      g.add(box(0.03, 0.2, 0.03, PM.metal, s * 0.25, 0.6, -0.16));
+    });
+    g.add(box(0.07, 0.04, 0.09, PM.trim, 0.25, 0.74, 0.16));
+    g.add(cyl2(0.008, 0.008, 0.06, PM.metal, 8, 0.25, 0.79, 0.16));
+    g.add(sph(0.018, PM.trim, 0.25, 0.83, 0.16));
+    g.add(at(plate(0.36, 0.16, 0.025, 0.03, PM.trim), 0, 0.18, 0.44));                  // footplate
+    return g;
+  }
+
+  // Patient transfer device: lateral-transfer platform on a powered chassis
+  function makeTransfer() {
+    const g = new T.Group();
+    g.add(at(plate(0.62, 1.56, 0.26, 0.12, PM.trim), 0, 0.09, 0));
+    g.add(at(plate(0.74, 1.78, 0.2, 0.16, PM.shell), 0, 0.33, 0));
+    g.add(at(plate(0.75, 1.79, 0.022, 0.165, PM.glass), 0, 0.42, 0));                 // reveal line
+    g.add(at(plate(0.7, 1.72, 0.1, 0.15, PM.shell2), 0, 0.445, 0));
+    g.add(at(plate(0.64, 1.62, 0.04, 0.14, PM.cush), 0, 0.545, 0));                    // transfer surface
+    for (let i = -6; i <= 6; i++) g.add(box(0.6, 0.006, 0.012, PM.shell2, 0, 0.587, i * 0.12));
+    [[0.25, 0.7], [-0.25, 0.7], [0.25, -0.7], [-0.25, -0.7]].forEach(([x, z]) => g.add(caster(x, z, 0.06)));
+    [0.23, -0.23].forEach((x) => g.add(wheelX(0.1, 0.06, x, 0.1, 0.08)));
+    [1, -1].forEach((sz) => { g.add(cyl2(0.045, 0.05, 0.05, PM.trim, 14, 0, 0.47, sz * 0.86)); g.add(cyl2(0.03, 0.03, 0.012, PM.glass, 12, 0, 0.5, sz * 0.86)); });
+    // operator handle at the head end
+    [-0.22, 0.22].forEach((x) => g.add(cyl2(0.016, 0.016, 0.42, PM.metal, 10, x, 0.72, -0.92)));
+    const bar = cyl2(0.02, 0.02, 0.5, PM.trim, 12, 0, 0.93, -0.92); bar.rotation.z = Math.PI / 2; g.add(bar);
+    g.add(box(0.16, 0.08, 0.04, PM.glass, 0, 0.88, -0.9));
+    return g;
+  }
+
+  // Clinical staff member: articulated figure in scrubs with cap, badge and stethoscope (maquette finish)
+  function makeStaff() {
+    const g = new T.Group();
+    const hipY = 0.88, torsoH = 0.55, rHip = 0.16, rWaist = 0.135, rChest = 0.16, shW = 0.19;
+    const pelvis = new T.Group(); pelvis.position.y = hipY; g.add(pelvis);
+    const pm = sph(rHip, PM.cloth2); pm.scale.set(1, 0.62, 0.74); pelvis.add(pm);
+    [1, -1].forEach((sx, k) => {                                                      // legs, slight stride
+      const hip = new T.Group(); hip.position.set(sx * rHip * 0.52, -0.06, 0); hip.rotation.x = k ? 0.12 : -0.1; pelvis.add(hip);
+      hip.add(cyl2(0.072, 0.058, 0.42, PM.cloth2, 14, 0, -0.21, 0));
+      const knee = new T.Group(); knee.position.y = -0.42; knee.rotation.x = k ? 0 : 0.14; hip.add(knee);
+      knee.add(cyl2(0.054, 0.042, 0.4, PM.cloth2, 14, 0, -0.2, 0));
+      const shoe = new T.Mesh(rbox(0.09, 0.06, 0.24, 0.025), PM.shell); shoe.position.set(0, -0.4 + 0.02, 0.05); knee.add(shoe);
+    });
+    const spine = new T.Group(); spine.position.y = 0.04; pelvis.add(spine);
+    const prof = [new T.Vector2(rHip, 0), new T.Vector2(rHip * 1.01, torsoH * 0.1), new T.Vector2(rWaist, torsoH * 0.42),
+      new T.Vector2(rChest, torsoH * 0.72), new T.Vector2(rChest * 0.96, torsoH * 0.88), new T.Vector2(rChest * 0.55, torsoH * 0.99)];
+    const tg = new T.LatheGeometry(prof, 20); tg.scale(1, 1, 0.72);
+    spine.add(new T.Mesh(tg, PM.cloth));
+    const vneck = box(0.1, 0.09, 0.01, PM.skin, 0, torsoH * 0.9, rChest * 0.7); vneck.rotation.x = -0.15; spine.add(vneck);
+    spine.add(box(0.09, 0.07, 0.012, PM.cloth2, -0.07, torsoH * 0.66, rChest * 0.72));   // chest pocket
+    spine.add(box(0.04, 0.055, 0.01, PM.shell, 0.075, torsoH * 0.62, rChest * 0.73));   // badge
+    [1, -1].forEach((sx) => { const s = sph(0.062, PM.cloth, sx * shW * 0.92, torsoH * 0.94, 0); s.scale.set(1.15, 0.9, 0.95); spine.add(s); });
+    // stethoscope around the neck
+    const st = new T.Mesh(new T.TorusGeometry(0.1, 0.008, 6, 28, Math.PI * 1.2), PM.trim); st.rotation.set(-0.15, 0, Math.PI * 1.1); st.position.set(0, torsoH * 0.86, 0.05); spine.add(st);
+    // arms with a natural hang
+    [1, -1].forEach((sx, k) => {
+      const sh = new T.Group(); sh.position.set(sx * shW, torsoH * 0.93, 0); sh.rotation.set(k ? 0.12 : -0.14, 0, sx * 0.08); spine.add(sh);
+      sh.add(cyl2(0.05, 0.044, 0.14, PM.cloth, 12, 0, -0.07, 0));                       // short sleeve
+      sh.add(cyl2(0.04, 0.036, 0.16, PM.skin, 12, 0, -0.2, 0));
+      const el = new T.Group(); el.position.y = -0.3; el.rotation.x = -0.25; sh.add(el);
+      el.add(cyl2(0.036, 0.03, 0.27, PM.skin, 12, 0, -0.135, 0));
+      const hand = sph(0.04, PM.skin, 0, -0.29, 0.005); hand.scale.set(0.8, 1.2, 0.55); el.add(hand);
+    });
+    spine.add(cyl2(0.045, 0.05, 0.09, PM.skin, 12, 0, torsoH + 0.03, 0));               // neck
+    const head = sph(0.103, PM.skin, 0, torsoH + 0.16, 0.01); head.scale.set(0.92, 1.1, 1); spine.add(head);
+    const nose = sph(0.018, PM.skin, 0, torsoH + 0.15, 0.105); nose.scale.set(0.8, 1.1, 1); spine.add(nose);
+    [1, -1].forEach((sx) => { const ear = sph(0.022, PM.skin, sx * 0.095, torsoH + 0.155, 0); ear.scale.set(0.5, 1, 0.8); spine.add(ear); });
+    const capG = new T.SphereGeometry(0.112, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.55);
+    const cap = new T.Mesh(capG, PM.cloth); cap.position.set(0, torsoH + 0.175, 0); cap.scale.set(0.95, 1, 1.02); spine.add(cap);
+    spine.add(cyl2(0.104, 0.106, 0.03, PM.cloth2, 20, 0, torsoH + 0.19, 0));             // cap band
+    return g;
+  }
+
+  // Elevator: landing wall, framed opening, centre-opening doors (one slightly open), call panel and indicator
+  function makeElevator() {
+    const g = new T.Group();
+    g.add(box(1.9, 2.5, 0.16, PM.shell2, 0, 1.25, -0.1));
+    g.add(box(1.16, 2.18, 0.12, PM.interior, 0, 1.09, -0.06));                           // car interior beyond
+    [-1, 1].forEach((sx) => g.add(box(0.08, 2.24, 0.2, PM.metal, sx * 0.62, 1.12, 0)));
+    g.add(box(1.32, 0.1, 0.2, PM.metal, 0, 2.24, 0));
+    g.add(box(1.24, 0.025, 0.24, PM.metal, 0, 0.012, 0.02));                             // sill
+    g.add(box(0.56, 2.14, 0.04, PM.metal, -0.36, 1.08, 0.04));                           // doors, left one part-open
+    g.add(box(0.56, 2.14, 0.04, PM.metal, 0.29, 1.08, 0.04));
+    g.add(box(0.004, 2.14, 0.045, PM.trim, 0.01, 1.08, 0.04));
+    g.add(box(0.14, 0.3, 0.025, PM.metal, 0.88, 1.1, 0.0));                              // call panel
+    [1.16, 1.04].forEach((y) => { const b = cyl2(0.025, 0.025, 0.012, PM.glass, 16, 0.88, y, 0.016); b.rotation.x = Math.PI / 2; g.add(b); });
+    g.add(box(0.42, 0.1, 0.02, PM.glass, 0, 2.42, -0.01));                                // floor indicator
+    return g;
+  }
+
+  // RTLS anchor: wall-mount locating sensor on a stand, with a staff badge tag beside it
+  function makeRTLS() {
+    const g = new T.Group();
+    g.add(cyl2(0.16, 0.18, 0.03, PM.trim, 28, 0, 0.015, 0));
+    g.add(cyl2(0.02, 0.02, 1.5, PM.metal, 12, 0, 0.78, 0));
+    g.add(box(0.3, 0.3, 0.05, PM.shell2, 0, 1.6, 0.03));
+    const dome = new T.Mesh(new T.SphereGeometry(0.11, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), PM.shell); dome.rotation.x = Math.PI / 2; dome.position.set(0, 1.6, 0.055); g.add(dome);
+    const ring = new T.Mesh(new T.TorusGeometry(0.112, 0.008, 8, 32), PM.glass); ring.position.set(0, 1.6, 0.058); g.add(ring);
+    g.add(cyl2(0.012, 0.012, 0.012, PM.glass, 12, 0.1, 1.71, 0.06));
+    return g;
+  }
+
+
+  // Security camera: pendant PTZ dome on a mounting post and arm
+  function makeCamera() {
+    const g = new T.Group();
+    g.add(cyl2(0.16, 0.18, 0.03, PM.trim, 28, 0, 0.015, 0));
+    g.add(cyl2(0.03, 0.03, 2.1, PM.metal, 14, 0, 1.06, 0));
+    const arm = cyl2(0.022, 0.022, 0.42, PM.metal, 12, 0, 2.08, 0.19); arm.rotation.x = Math.PI / 2; g.add(arm);
+    g.add(cyl2(0.035, 0.035, 0.06, PM.shell2, 14, 0, 2.08, 0.4));
+    g.add(cyl2(0.03, 0.03, 0.14, PM.metal, 12, 0, 2.0, 0.4));                            // pendant tube
+    g.add(cyl2(0.12, 0.13, 0.1, PM.shell, 28, 0, 1.88, 0.4));                            // housing
+    g.add(cyl2(0.132, 0.132, 0.018, PM.shell2, 28, 0, 1.83, 0.4));
+    const dome = new T.Mesh(new T.SphereGeometry(0.11, 28, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), PM.glass);
+    dome.position.set(0, 1.83, 0.4); g.add(dome);
+    // fixed bullet camera lower on the post, facing the other way
+    const bullet = new T.Group(); bullet.position.set(0, 1.45, -0.05); bullet.rotation.x = 0.25; g.add(bullet);
+    bullet.add(box(0.08, 0.05, 0.06, PM.shell2, 0, 0, 0.0));
+    const body = cyl2(0.055, 0.055, 0.24, PM.shell, 20, 0, -0.02, -0.14); body.rotation.x = Math.PI / 2; bullet.add(body);
+    const hood = cyl2(0.064, 0.058, 0.08, PM.shell, 20, 0, -0.01, -0.29); hood.rotation.x = Math.PI / 2; bullet.add(hood);
+    const lens = cyl2(0.04, 0.04, 0.01, PM.glass, 20, 0, -0.02, -0.3); lens.rotation.x = Math.PI / 2; bullet.add(lens);
+    return g;
+  }
+
+  // Alarms: wall section with a fire-alarm pull station, horn-strobe and a corridor dome light
+  function makeAlarms() {
+    const g = new T.Group();
+    [-1, 1].forEach((sx) => g.add(box(0.06, 0.04, 0.3, PM.trim, sx * 0.42, 0.02, 0)));      // feet
+    g.add(box(0.9, 1.95, 0.1, PM.shell2, 0, 0.975, 0));
+    // pull station
+    const ps = new T.Mesh(rbox(0.16, 0.22, 0.06, 0.02), PM.shell); ps.position.set(-0.22, 1.2, 0.08); g.add(ps);
+    g.add(box(0.1, 0.035, 0.03, PM.trim, -0.22, 1.24, 0.12));                               // pull handle
+    g.add(box(0.1, 0.03, 0.005, PM.trim, -0.22, 1.13, 0.113));                              // label plate
+    // horn-strobe
+    const hs = new T.Mesh(rbox(0.16, 0.2, 0.08, 0.02), PM.shell); hs.position.set(0.22, 1.72, 0.09); g.add(hs);
+    g.add(box(0.1, 0.06, 0.02, PM.glass, 0.22, 1.66, 0.14));                                 // strobe lens
+    for (let k = 0; k < 4; k++) g.add(box(0.1, 0.008, 0.005, PM.trim, 0.22, 1.76 + k * 0.018, 0.133)); // horn grille
+    // corridor dome light on top
+    g.add(box(0.2, 0.06, 0.16, PM.shell, 0, 1.98, 0.02));
+    const dl = new T.Mesh(new T.SphereGeometry(0.075, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), PM.glass); dl.position.set(0, 2.01, 0.02); g.add(dl);
+    return g;
+  }
+
+  // soft contact shadow under each asset
+  const contactTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 128; const x = c.getContext("2d");
+    const gr = x.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, "rgba(0,0,0,0.38)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    x.fillStyle = gr; x.fillRect(0, 0, 128, 128); return new T.CanvasTexture(c); })();
+  const shadowMat = new T.MeshBasicMaterial({ map: contactTex, transparent: true, depthWrite: false });
+  PM.shadow = shadowMat;
+  function withShadow(g, w, d) { const s = new T.Mesh(new T.PlaneGeometry(w, d), shadowMat); s.rotation.x = -Math.PI / 2; s.position.y = 0.004; g.add(s); return g; }
+
+  const PHYS_SCALE = 0.44;   // real-world metres to layer units
   const PHYSICAL_ITEMS = [
-    { name: "AMR", make() { const g = new T.Group();
-        g.add(part(rbox(0.8, 0.26, 0.56, 0.08), B(), 0, 0.15, 0));
-        g.add(part(cyl(0.09, 0.08), A(), 0.18, 0.32, 0));
-        [-0.28, 0.28].forEach((x) => [-0.24, 0.24].forEach((z) => { const w = part(cyl(0.05, 0.04, 14), A(), x, 0.05, z); w.rotation.x = Math.PI / 2; g.add(w); }));
-        return g; } },
-    { name: "Supply cart", make() { const g = new T.Group();
-        g.add(part(rbox(0.5, 0.5, 0.36, 0.04), B(), 0, 0.33, 0));
-        [0.2, 0.36, 0.52].forEach((y) => g.add(part(rbox(0.52, 0.015, 0.37, 0.005), A(), 0, y, 0)));
-        [-0.2, 0.2].forEach((x) => [-0.13, 0.13].forEach((z) => g.add(part(new T.SphereGeometry(0.035, 12, 8), A(), x, 0.04, z))));
-        return g; } },
-    { name: "Bed", make() { const g = new T.Group();
-        [-0.45, 0.45].forEach((x) => [-0.2, 0.2].forEach((z) => g.add(part(cyl(0.02, 0.22, 10), A(), x, 0.11, z))));
-        g.add(part(rbox(1.0, 0.06, 0.48, 0.02), A(), 0, 0.24, 0));
-        g.add(part(rbox(0.96, 0.09, 0.44, 0.04), B(), 0, 0.32, 0));
-        g.add(part(rbox(0.05, 0.28, 0.48, 0.02), A(), -0.5, 0.38, 0));
-        g.add(part(rbox(0.5, 0.05, 0.02, 0.01), A(), 0.05, 0.4, 0.23));
-        return g; } },
-    { name: "Wheelchair", make() { const g = new T.Group();
-        g.add(part(rbox(0.3, 0.05, 0.3, 0.02), B(), 0, 0.24, 0));
-        g.add(part(rbox(0.05, 0.3, 0.3, 0.02), B(), -0.15, 0.4, 0));
-        [-0.18, 0.18].forEach((z) => { const w = part(new T.TorusGeometry(0.19, 0.022, 10, 32), A(), -0.04, 0.2, z); g.add(w); });
-        [0.14].forEach((x) => [-0.12, 0.12].forEach((z) => { const c = part(cyl(0.04, 0.03, 14), A(), x, 0.04, z); c.rotation.x = Math.PI / 2; g.add(c); }));
-        return g; } },
-    { name: "Patient transfer device", make() { const g = new T.Group();
-        g.add(part(rbox(0.9, 0.08, 0.44, 0.04), A(), 0, 0.06, 0));
-        [-0.32, 0.32].forEach((x) => g.add(part(rbox(0.08, 0.14, 0.4, 0.02), A(), x, 0.17, 0)));
-        g.add(part(rbox(0.94, 0.1, 0.46, 0.05), B(), 0, 0.29, 0));
-        return g; } },
-    { name: "Staff", make() { const g = new T.Group();
-        g.add(part(cyl(0.11, 0.34, 20), B(), 0, 0.17, 0));
-        g.add(part(new T.SphereGeometry(0.085, 18, 12), B(), 0, 0.44, 0));
-        return g; } },
-    { name: "Elevator and doors", make() { const g = new T.Group();
-        [-0.3, 0.3].forEach((x) => g.add(part(rbox(0.06, 0.62, 0.12, 0.01), A(), x, 0.31, 0)));
-        g.add(part(rbox(0.66, 0.06, 0.12, 0.01), A(), 0, 0.64, 0));
-        [-0.14, 0.14].forEach((x) => g.add(part(rbox(0.25, 0.58, 0.03, 0.01), B(), x * 1.25, 0.29, -0.02)));
-        return g; } },
-    { name: "RTLS beacon", make() { const g = new T.Group();
-        g.add(part(cyl(0.13, 0.05, 28), B(), 0, 0.03, 0));
-        g.add(part(cyl(0.015, 0.22, 8), A(), 0, 0.16, 0));
-        const ring = part(new T.TorusGeometry(0.1, 0.01, 8, 32), A(), 0, 0.3, 0); ring.rotation.x = Math.PI / 2; g.add(ring);
-        return g; } },
+    // front row: things and people that move
+    { name: "AMR", h: 1.0, yaw: 0.55, row: 0, make: () => withShadow(makeAMR(), 1.3, 1.6) },
+    { name: "Supply cart", h: 1.2, yaw: 0.55, row: 0, make: () => withShadow(makeCart(), 1.1, 1.4) },
+    { name: "Bed", h: 1.2, yaw: 1.15, row: 0, make: () => withShadow(makeBed(), 1.6, 2.8) },
+    { name: "Wheelchair", h: 0.95, yaw: 0.6, row: 0, make: () => withShadow(makeWheelchair(), 1.0, 1.3) },
+    { name: "Patient transfer device", h: 1.0, yaw: 1.15, row: 0, make: () => withShadow(makeTransfer(), 1.3, 2.5) },
+    { name: "Staff", h: 1.75, yaw: 0.35, row: 0, make: () => withShadow(makeStaff(), 0.9, 0.9) },
+    // back row: the building's fixed infrastructure
+    { name: "Elevator and doors", h: 2.5, yaw: 0.15, row: 1, make: () => withShadow(makeElevator(), 2.4, 1.0) },
+    { name: "Security cameras", h: 2.15, yaw: 0.5, row: 1, make: () => withShadow(makeCamera(), 0.8, 0.9) },
+    { name: "Alarms", h: 2.1, yaw: 0.15, row: 1, make: () => withShadow(makeAlarms(), 1.4, 0.7) },
+    { name: "RTLS beacon", h: 1.8, yaw: 0.35, row: 1, make: () => withShadow(makeRTLS(), 0.7, 0.7) },
   ];
+
 
   // Demand: four ordering sources as upright tiles, each with a drawn glyph (generic, no vendor logos)
   const DEMAND_ITEMS = [
@@ -784,18 +1033,24 @@
   }
   function buildPhysical() {
     symMats = symSets.physical;
-    const s = slabs.physical, grp = new T.Group(), n = PHYSICAL_ITEMS.length, step = 8.4 / (n - 1);
-    PHYSICAL_ITEMS.forEach((it, i) => {
-      const o = it.make(); const x = -4.2 + i * step;
-      o.position.set(x, s.t / 2, -0.4); o.rotation.y = 0.35;
+    const s = slabs.physical, grp = new T.Group();
+    // the back row is drawn slightly smaller so tall fixtures stay clear of the layer above at a low camera angle
+    const ROWS = [{ z: 1.5, x0: -3.9, x1: 3.9, k: 1 }, { z: -0.3, x0: -3.0, x1: 3.0, k: 0.78 }];
+    PHYSICAL_ITEMS.forEach((it) => {
+      const rowItems = PHYSICAL_ITEMS.filter((p) => p.row === it.row), k = rowItems.indexOf(it), R = ROWS[it.row];
+      const x = R.x0 + (R.x1 - R.x0) * (rowItems.length > 1 ? k / (rowItems.length - 1) : 0.5), z = R.z;
+      const o = it.make();
+      o.scale.setScalar(PHYS_SCALE * R.k);
+      o.position.set(x, s.t / 2, z); o.rotation.y = it.yaw;
       grp.add(o);
-      it.anchor = new T.Vector3(x, s.t / 2 + 0.85, -0.4);
+      it.anchor = new T.Vector3(x, s.t / 2 + it.h * PHYS_SCALE * R.k + 0.12, z);
       o.traverse((m) => { m.userData.item = it; });
     });
     s.group.add(grp); s.items = PHYSICAL_ITEMS; s.symGroup = grp;
   }
   function applySymbolColors() {
     Object.values(symSets).forEach((m) => { paint(m.body, C.fill); paint(m.accent, C.ink3); });
+    paintPhys();
     tileFaceMats.forEach((m) => { if (m.map) m.map.dispose(); m.map = drawGlyph(m.userData.glyph, C.ink2, C.fill); m.color.set(0xffffff); m.needsUpdate = true; });
   }
   buildDemand(); buildPhysical(); applySymbolColors();
@@ -1158,6 +1413,7 @@
     });
     edgeObjs.forEach((o) => { if (o.curve) place(o.label, o.curve.getPointAt(0.5)); });
     ["demand", "physical"].forEach((id) => { const o = 0.2 + 0.8 * slabs[id].opacity; symSets[id].body.opacity = symSets[id].accent.opacity = o; });
+    { const o = 0.2 + 0.8 * slabs.physical.opacity; Object.values(PM).forEach((m) => { m.opacity = o; if (m !== PM.shadow) m.depthWrite = o > 0.95; }); }
     tileFaceMats.forEach((m) => { m.opacity = 0.2 + 0.8 * slabs.demand.opacity; });
     itemLabels.forEach((l) => {
       const s = slabs[l.id], c = s.cur;
