@@ -299,8 +299,8 @@
     <div class="seg" role="group" aria-labelledby="flow-l">
       <button type="button" data-flow="work" aria-pressed="false">Work</button>
       <button type="button" data-flow="data" aria-pressed="false">Data</button>
-      <button type="button" data-flow="both" aria-pressed="true">Both</button>
-      <button type="button" data-flow="none" aria-pressed="false">None</button>
+      <button type="button" data-flow="both" aria-pressed="false">Both</button>
+      <button type="button" data-flow="none" aria-pressed="true">None</button>
     </div>
   </div>
   <div class="ctl"><label for="spacing">Spacing</label><input id="spacing" type="range" min="0" max="100" value="55"></div>
@@ -425,7 +425,7 @@
   // ---------- State ----------
   const reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
   const darkMQ = window.matchMedia("(prefers-color-scheme: dark)");
-  const state = { paused: false, view: "stack", arrangement: "peer", flow: "both", spacing: 0.55, selected: null, hovered: null, row: null };
+  const state = { paused: false, view: "stack", arrangement: "peer", flow: "none", spacing: 0.55, selected: null, hovered: null, row: null };
 
   // ---------- Panel (works with or without WebGL) ----------
   const panel = document.getElementById("panel");
@@ -574,8 +574,8 @@
     distanceWide: 28,    // windows wider than 1.4:1 (laptops, monitors). Smaller is closer; try 24 to 34.
     distanceMedium: 33,  // between 1:1 and 1.4:1 (tablets in landscape). Try 28 to 38.
     distanceTall: 42,    // taller than wide (phones, portrait tablets). Try 36 to 50.
-    azimuth: 0.62,       // turn around the stack, in radians. 0 is straight on; 0.62 is about 35°. Try 0.3 to 0.9.
-    tilt: 1.13,          // angle down from vertical, in radians. 1.13 looks down about 25°. Try 1.0 (steeper) to 1.3 (flatter).
+    azimuth: 0,          // turn around the stack, in radians. 0 is straight on; 0.62 is about 35°. Try -0.3 to 0.9.
+    tilt: 1.37,          // angle down from vertical, in radians. 1.37 looks down about 12°; 1.13 about 25°. Try 1.0 (steeper) to 1.45 (flatter).
     targetY: 0.8,        // height the camera aims at. Raise it to move the stack lower on screen. Try 0 to 2.
     fov: 30,             // lens angle in degrees. Lower is flatter and more telephoto. Try 24 to 40.
     minDistance: 14,     // closest zoom allowed
