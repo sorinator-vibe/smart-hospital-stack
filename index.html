@@ -250,6 +250,10 @@
         <p><b>A gap between platforms.</b> Cross-fleet orchestration covers robots moving materials, and the Hub stops at visibility. Neither assigns work between robots and people, defines proof of completion, or moves patients.</p>
         <h3>The line between the two</h3>
         <p>The work layer chooses the qualified performer and defines what done means. Cross-fleet orchestration chooses the robot, the route and the timing. Assignments go down and proof and safety holds come back up. Without that line written down, two systems will both believe they own dispatch.</p>
+        <h3>Where demand comes from</h3>
+        <p><b>People ask.</b> A clinician asks at a wall touch panel, the way integrated operating rooms already work. Physicians and nurses order from a phone or tablet, and shared services staff ask at a kiosk. A patient in recovery orders a meal from the bedside, and a robot delivers it.</p>
+        <p><b>Systems ask.</b> EHR triggers and the OR schedule send demand with no one standing by. A room closing is enough to start the supply pull that follows.</p>
+        <p><b>Forecasts ask early.</b> Predictive positioning moves supplies toward the place they will be needed before anyone requests them. A forecast enters the same queue as a request and follows the same confidence rule. It applies to things only: a clinician still starts every patient move.</p>
         <h3>Why patient movement is a second lane</h3>
         <p>Auto-assignment and a scan as proof fit an item, not a person. Patient transfer devices and autonomous wheelchairs move people through the same halls and elevators as robots, so patient moves share the layers below, with stricter rules at each one.</p>
       </section>
@@ -268,7 +272,7 @@
         <ol>
           <li><b>Innovative.</b> The new capability is seeing relationships across layers, not a 3D effect.</li>
           <li><b>Useful.</b> Every control answers a question about how the layers relate.</li>
-          <li><b>Aesthetic.</b> Matte slabs, soft light and one accent color.</li>
+          <li><b>Aesthetic.</b> Matte slabs, soft light and one accent color. Objects stay in light and mid grays, with no black parts, so detail stays visible in both appearances.</li>
           <li><b>Understandable.</b> One legend, used the same way everywhere.</li>
           <li><b>Unobtrusive.</b> Connection labels appear only for the layer you are looking at.</li>
           <li><b>Honest.</b> It is called a concept model, not a live system.</li>
@@ -277,6 +281,10 @@
           <li><b>Environmentally friendly.</b> One self-contained file, with geometry generated in code.</li>
           <li><b>As little design as possible.</b> Each color and each line style has one job.</li>
         </ol>
+        <h3>People and devices on the Demand layer</h3>
+        <p>Figures and devices are modelled at real scale in the same neutral finish as the Physical layer. People now appear at the top of the stack, where work is asked for, and at the bottom, where it is done.</p>
+        <p>The devices are forms hospitals already use: the wall touch panel of an integrated operating room, a kiosk, a wall-arm workstation, phones and tablets. A station with no one beside it marks demand that a system sends by itself.</p>
+        <p>Predictive positioning is planned, so its footprint and the tote it will place are drawn dashed, the legend's concept style. Screens are drawn in the layer's own ink and do not glow, which keeps blue for work.</p>
         <ul class="src">
           <li>Apple Human Interface Guidelines: design principles and motion.</li>
           <li>Vitsœ, Dieter Rams's ten principles for good design.</li>
@@ -326,8 +334,8 @@
 
   // ---------- Content ----------
   const LAYERS = {
-    demand:   { name: "Demand", verb: "Existing systems", kind: "existing",
-                body: "EHR orders, OR schedule, transport and bed requests, staff requests." },
+    demand:   { name: "Demand", verb: "People and existing systems", kind: "existing",
+                body: "People ask at wall touch panels and kiosks, on phones and tablets, and from the bedside. Systems ask with no one standing by: EHR triggers, the OR schedule, and forecasts that position supplies ahead of need." },
     crew:     { name: "Logistics work", sub: "Things", verb: "Runs the work", kind: "concept", work: true,
                 q: "Who carries this item, and what proves it arrived?" },
     pm:       { name: "Patient moves", sub: "People", verb: "Runs the work", kind: "concept", work: true,
@@ -344,7 +352,7 @@
   const ORDER = ["demand", "crew", "pm", "prior", "hub", "ready", "physical"];
 
   const EDGES = [
-    { from: "demand", to: "crew",     type: "work", label: "Requests and orders" },
+    { from: "demand", to: "crew",     type: "work", label: "Requests, orders and predicted supply pulls" },
     { from: "demand", to: "pm",       type: "work", label: "Clinician move requests" },
     { from: "crew",   to: "prior",    type: "work", label: "Robot assignments" },
     { from: "prior",  to: "crew",     type: "work", label: "Proof and safety holds" },
@@ -588,6 +596,13 @@
   const sun = new T.DirectionalLight(0xffffff, 0.5);
   sun.position.set(-6, 14, 10);
   scene.add(sun);
+  // Neutral white light, as first drawn. Dark appearance gets a little more fill so shaded sides keep their form.
+  function applyLights() {
+    const dk = darkMQ.matches;
+    hemi.color.set(0xffffff); hemi.groundColor.set(0xa9aeb5); hemi.intensity = dk ? 0.7 : 0.62;
+    sun.color.set(0xffffff); sun.intensity = dk ? 0.46 : 0.5;
+  }
+  applyLights();
 
   const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   let C = {};
@@ -695,16 +710,20 @@
   // One neutral "architectural model" palette: form carries the detail, not color.
   const PM = {};
   const PHYS_TONES = {
-    shell: [0xf3f4f6, 0.42, 0.1], shell2: [0xdfe3e8, 0.5, 0.08], trim: [0x3a3f47, 0.55, 0.3],
-    metal: [0xbac0c7, 0.34, 0.6], glass: [0x16191e, 0.2, 0.45], tire: [0x24272c, 0.92, 0],
+    shell: [0xf3f4f6, 0.42, 0.1], shell2: [0xdfe3e8, 0.5, 0.08], trim: [0x878d96, 0.55, 0.3],
+    metal: [0xbac0c7, 0.34, 0.6], glass: [0x5d636c, 0.2, 0.45], tire: [0x747a82, 0.92, 0],
     cush: [0xc8cdd4, 0.82, 0], cloth: [0x9aa4b0, 0.86, 0], cloth2: [0x7d8692, 0.88, 0],
-    skin: [0xdcd7d1, 0.7, 0], hair: [0x5b5f66, 0.8, 0], interior: [0x2c3036, 0.9, 0],
+    skin: [0xdcd7d1, 0.7, 0], hair: [0x6f747b, 0.8, 0], interior: [0x70757d, 0.9, 0],
   };
+  // Dark appearance: the same palette with a narrower range. Darks are lifted clear of the canvas and whites are eased so nothing glares.
+  const PHYS_DARK = { shell: 0xdddfe2, shell2: 0xc6cad0, trim: 0x8c929b, metal: 0xb0b5bc, glass: 0x626871, tire: 0x7a8088,
+    cush: 0xb9bec5, cloth: 0x94a0ad, cloth2: 0x7a8694, skin: 0xd3cdc6, hair: 0x7c8087, interior: 0x767b83 };
+  const toneFor = (tones, dark, k) => (darkMQ.matches && dark[k] != null ? dark[k] : tones[k][0]);
   Object.keys(PHYS_TONES).forEach((k) => {
     const [, r, m] = PHYS_TONES[k];
     PM[k] = new T.MeshStandardMaterial({ roughness: r, metalness: m, transparent: true });
   });
-  function paintPhys() { Object.keys(PHYS_TONES).forEach((k) => paint(PM[k], PHYS_TONES[k][0])); }
+  function paintPhys() { Object.keys(PHYS_TONES).forEach((k) => paint(PM[k], toneFor(PHYS_TONES, PHYS_DARK, k))); }
 
   const Mx = (geo, mat, x, y, z) => { const m = new T.Mesh(geo, mat); m.position.set(x || 0, y || 0, z || 0); return m; };
   const box = (w, h, d, mat, x, y, z) => Mx(new T.BoxGeometry(w, h, d), mat, x, y, z);
@@ -984,50 +1003,290 @@
   ];
 
 
-  // Demand: four ordering sources as upright tiles, each with a drawn glyph (generic, no vendor logos)
-  const DEMAND_ITEMS = [
-    { name: "EHR orders", glyph: "clipboard" },
-    { name: "OR schedule", glyph: "calendar" },
-    { name: "Transport and bed requests", glyph: "bed" },
-    { name: "Staff requests", glyph: "person" },
-  ];
-  function drawGlyph(kind, ink, bg) {
-    const c = document.createElement("canvas"); c.width = c.height = 256;
-    const g = c.getContext("2d");
-    g.fillStyle = bg; g.fillRect(0, 0, 256, 256);
-    g.strokeStyle = ink; g.lineWidth = 11; g.lineCap = "round"; g.lineJoin = "round";
+  // ---------- Demand layer: who asks, and what they ask on ----------
+  // Real-world scale and the same maquette finish as the Physical layer, in its own material set so it fades with its own layer.
+  // Two stations have a person: a clinician at a wall touch panel and shared services staff at a kiosk.
+  // Three have no one: EHR orders, the OR schedule and predicted supply positioning are sent by systems.
+  const DM = {};
+  const DEM_TONES = Object.assign({}, PHYS_TONES, { coat: [0xf5f6f8, 0.6, 0], wall: [0xfafbfc, 0.95, 0], screen: [0xe6eaef, 0.3, 0.05] });
+  Object.keys(DEM_TONES).forEach((k) => {
+    const [, r, m] = DEM_TONES[k];
+    DM[k] = new T.MeshStandardMaterial({ roughness: r, metalness: m, transparent: true });
+  });
+  const DEM_DARK = Object.assign({}, PHYS_DARK, { coat: 0xe0e2e5, wall: 0xcfd2d6, screen: 0xd5d9de });
+  DM.shadow = new T.MeshBasicMaterial({ map: contactTex, transparent: true, depthWrite: false });
+  // the legend's concept style, for the one source that is planned and not yet an existing system
+  const conceptLine = new T.LineDashedMaterial({ dashSize: 0.11, gapSize: 0.07, transparent: true });
+  const conceptLineFine = new T.LineDashedMaterial({ dashSize: 0.05, gapSize: 0.035, transparent: true });
+  function paintDemand() { Object.keys(DEM_TONES).forEach((k) => paint(DM[k], toneFor(DEM_TONES, DEM_DARK, k))); paint(conceptLine, C.ink3); paint(conceptLineFine, C.ink2); }
+  const dCyl = (rt, rb, h, mat, n, x, y, z) => Mx(new T.CylinderGeometry(rt, rb, h, n || 14), mat, x, y, z);
+  const dSph = (r, mat, x, y, z) => Mx(new T.SphereGeometry(r, 20, 14), mat, x, y, z);
+  const dBox = (w, h, d, mat, x, y, z) => Mx(new T.BoxGeometry(w, h, d), mat, x, y, z);
+  const dShadow = (w, d, x, z) => { const s = new T.Mesh(new T.PlaneGeometry(w, d), DM.shadow); s.rotation.x = -Math.PI / 2; s.position.set(x || 0, 0.004, z || 0); return s; };
+
+  // Hand-held device: a slim slab with a pale screen that does not glow
+  function handDevice(w, h, thick) {
+    const g = new T.Group();
+    g.add(new T.Mesh(rbox(w, h, thick, Math.min(w, h) * 0.12), DM.metal));          // aluminium back, so it never reads as a black slab
+    const f = new T.Mesh(new T.PlaneGeometry(w * 0.88, h * 0.9), DM.screen); f.position.z = thick / 2 + 0.0015; g.add(f);
+    for (let i = 0; i < 3; i++) g.add(dBox(w * 0.6, h * 0.05, 0.001, DM.cush, -w * 0.08, h * (0.22 - i * 0.16), thick / 2 + 0.0025));
+    return g;
+  }
+
+  // Figure. o: { build, hair, hairTone, coat, mask, stetho, vest, lanyard, plain, top, pant, pose, upper (no legs, for a patient in bed), lean }
+  function makeRequester(o) {
+    const g = new T.Group(), body = new T.Group(); g.add(body);
+    const F = o.build === "f";
+    body.scale.setScalar(F ? 0.94 : 1);
+    const hipY = 0.88, torsoH = 0.55, rHip = F ? 0.158 : 0.16, rWaist = F ? 0.122 : 0.135, rChest = F ? 0.15 : 0.16, shW = F ? 0.175 : 0.19;
+    const top = DM[o.top || "cloth"], pant = DM[o.pant || "cloth2"], sleeve = o.coat ? DM.coat : top;
+    const pelvis = new T.Group(); pelvis.position.y = o.upper ? 0 : hipY; body.add(pelvis);
+    const pm = dSph(rHip, o.upper ? top : pant); pm.scale.set(1, 0.62, 0.74); pelvis.add(pm);
+    if (!o.upper) [1, -1].forEach((sx, k) => {                                        // legs, relaxed stance
+      const hip = new T.Group(); hip.position.set(sx * rHip * 0.52, -0.06, 0); hip.rotation.set(k ? 0.06 : -0.05, 0, sx * 0.035); pelvis.add(hip);
+      hip.add(dCyl(0.072, 0.058, 0.42, pant, 14, 0, -0.21, 0));
+      const knee = new T.Group(); knee.position.y = -0.42; knee.rotation.x = k ? 0 : 0.06; hip.add(knee);
+      knee.add(dCyl(0.054, 0.042, 0.4, pant, 14, 0, -0.2, 0));
+      const shoe = new T.Mesh(rbox(0.09, 0.06, 0.24, 0.025), o.coat ? DM.trim : DM.shell); shoe.position.set(0, -0.38, 0.05); knee.add(shoe);
+    });
+    const spine = new T.Group(); spine.position.y = 0.04; spine.rotation.x = o.lean != null ? o.lean : 0.04; pelvis.add(spine);
+    const lathe = (pts, mat, zs) => { const tg = new T.LatheGeometry(pts.map(([r, y]) => new T.Vector2(r, y)), 22); tg.scale(1, 1, zs); return new T.Mesh(tg, mat); };
+    spine.add(lathe([[rHip, 0], [rHip * 1.01, torsoH * 0.1], [rWaist, torsoH * 0.42], [rChest, torsoH * 0.72], [rChest * 0.96, torsoH * 0.88], [rChest * 0.55, torsoH * 0.99]], top, 0.72));
+    const frontZ = rChest * 0.72;
+    const vneck = dBox(0.09, 0.08, 0.01, DM.skin, 0, torsoH * 0.9, frontZ * 0.97); vneck.rotation.x = -0.15; spine.add(vneck);
+    if (o.coat) {                                                                     // white coat, open at the front, to mid-thigh
+      const coat = new T.Mesh(new T.LatheGeometry([[rHip * 1.2, -0.36], [rHip * 1.14, 0], [rWaist * 1.16, torsoH * 0.42], [rChest * 1.1, torsoH * 0.72],
+        [rChest * 1.05, torsoH * 0.9], [rChest * 0.6, torsoH * 1.0]].map(([r, y]) => new T.Vector2(r, y)), 22, 0.38, Math.PI * 2 - 0.76), DM.coat);
+      coat.geometry.scale(1, 1, 0.76); coat.material.side = T.DoubleSide; spine.add(coat);
+      [1, -1].forEach((sx) => { const lap = dBox(0.05, 0.2, 0.012, DM.coat, sx * 0.062, torsoH * 0.74, frontZ * 1.1); lap.rotation.set(-0.12, 0, sx * 0.3); spine.add(lap); });
+    } else if (o.vest) {                                                              // work vest over a polo
+      spine.add(lathe([[rHip * 1.07, torsoH * 0.06], [rWaist * 1.12, torsoH * 0.42], [rChest * 1.08, torsoH * 0.72], [rChest * 1.03, torsoH * 0.9], [rChest * 0.7, torsoH * 0.97]], DM.cloth2, 0.76));
+      spine.add(dBox(0.035, torsoH * 0.82, 0.012, top, 0, torsoH * 0.5, frontZ * 1.12));        // open front
+      [1, -1].forEach((sx) => spine.add(dBox(0.07, 0.06, 0.01, DM.trim, sx * 0.085, torsoH * 0.3, frontZ * 1.16)));
+    } else if (!o.plain) {
+      spine.add(dBox(0.09, 0.07, 0.012, pant === top ? DM.cloth2 : pant, -0.07, torsoH * 0.66, frontZ));   // chest pocket
+    }
+    if (o.plain) { /* patient gown: no pocket or badge */ } else if (o.lanyard) {
+      const ln = new T.Mesh(new T.TorusGeometry(0.11, 0.006, 6, 28), DM.trim); ln.rotation.x = 1.25; ln.scale.set(0.8, 1.5, 1); ln.position.set(0, torsoH * 0.78, 0.035); spine.add(ln);
+      spine.add(dBox(0.05, 0.07, 0.008, DM.shell, 0, torsoH * 0.5, frontZ * 1.2));
+    } else {
+      spine.add(dBox(0.04, 0.055, 0.01, DM.shell, 0.078, torsoH * 0.62, frontZ * (o.coat ? 1.14 : 1.02)));   // badge
+    }
+    [1, -1].forEach((sx) => { const s = dSph(0.062, sleeve, sx * shW * 0.92, torsoH * 0.94, 0); s.scale.set(1.15, 0.9, 0.95); spine.add(s); });
+    if (o.stetho) { const st = new T.Mesh(new T.TorusGeometry(0.1, 0.008, 6, 28, Math.PI * 1.2), DM.trim); st.rotation.set(-0.15, 0, Math.PI * 1.1); st.position.set(0, torsoH * 0.86, 0.05); spine.add(st); }
+
+    // arms: [shoulder pitch, roll toward midline, elbow], then head [pitch, yaw]
+    const POSE = {
+      touch: { L: [-1.32, 0.04, -0.22], R: [0.04, -0.06, -0.3], head: [0.02, 0.1] },     // one arm out to a wall panel at shoulder height
+      tap:   { L: [0.04, -0.06, -0.24], R: [-0.72, 0.1, -0.74], head: [0.3, -0.06] },    // one hand on a kiosk screen below eye level
+      tablet: { L: [-0.42, 0.10, -1.2], R: [-0.55, 0.30, -1.38], head: [0.36, 0] },      // tablet cradled in the left arm, right hand tapping
+      phone:  { L: [0.04, -0.06, -0.2], R: [-0.3, 0.14, -1.95], head: [0.2, -0.16] },    // phone raised in the right hand
+      lap:    { L: [-0.2, 0.16, -1.25], R: [-0.2, 0.16, -1.25], head: [0.62, 0] },       // tablet held in both hands while reclined
+    }[o.pose || "tap"];
+    const arms = {};
+    const longSleeve = !!o.coat;
+    [["L", 1], ["R", -1]].forEach(([side, sx]) => {
+      const [px, roll, elx] = POSE[side];
+      const sh = new T.Group(); sh.position.set(sx * shW, torsoH * 0.93, 0); sh.rotation.set(px, 0, -sx * roll); spine.add(sh);
+      sh.add(dCyl(0.05, 0.044, longSleeve ? 0.3 : 0.14, sleeve, 12, 0, longSleeve ? -0.15 : -0.07, 0));
+      if (!longSleeve) sh.add(dCyl(0.04, 0.036, 0.16, DM.skin, 12, 0, -0.2, 0));
+      const el = new T.Group(); el.position.y = -0.3; el.rotation.x = elx; sh.add(el);
+      el.add(dCyl(longSleeve ? 0.042 : 0.036, longSleeve ? 0.036 : 0.03, longSleeve ? 0.24 : 0.27, longSleeve ? sleeve : DM.skin, 12, 0, longSleeve ? -0.12 : -0.135, 0));
+      const hand = dSph(0.04, DM.skin, 0, -0.29, 0.005); hand.scale.set(0.8, 1.2, 0.55); el.add(hand);
+      arms[side] = el;
+    });
+    if (o.pose === "tablet") { const d = handDevice(0.19, 0.26, 0.012); d.position.set(-0.11, -0.3, 0.05); d.rotation.set(-0.72, 0, 0.1); arms.L.add(d); }
+    else if (o.pose === "lap") { const d = handDevice(0.26, 0.19, 0.012); d.position.set(-shW, -0.31, 0.045); d.rotation.set(-0.74, 0, 0); arms.L.add(d); }
+    else if (o.pose === "phone") { const d = handDevice(0.074, 0.15, 0.01); d.position.set(0.012, -0.33, 0.03); d.rotation.set(-0.5, 0.15, 0); arms.R.add(d); }
+
+    const neck = new T.Group(); neck.position.y = torsoH; spine.add(neck);
+    neck.add(dCyl(0.045, 0.05, 0.09, DM.skin, 12, 0, 0.03, 0));
+    const head = new T.Group(); head.position.y = 0.07; head.rotation.set(POSE.head[0], POSE.head[1], 0); neck.add(head);
+    const skull = dSph(0.103, DM.skin, 0, 0.09, 0.01); skull.scale.set(0.92, 1.1, 1); head.add(skull);
+    const nose = dSph(0.018, DM.skin, 0, 0.08, 0.105); nose.scale.set(0.8, 1.1, 1); head.add(nose);
+    [1, -1].forEach((sx) => { const ear = dSph(0.022, DM.skin, sx * 0.095, 0.085, 0); ear.scale.set(0.5, 1, 0.8); head.add(ear); });
+    const dome = (r, frac, mat) => new T.Mesh(new T.SphereGeometry(r, 22, 12, 0, Math.PI * 2, 0, Math.PI * frac), mat);
+    if (o.hair === "cap") {                                                           // bouffant cap and band
+      const cap = dome(0.114, 0.56, DM.cloth); cap.position.set(0, 0.105, -0.004); cap.scale.set(0.97, 1.05, 1.08); head.add(cap);
+      head.add(dCyl(0.104, 0.106, 0.03, DM.cloth2, 20, 0, 0.12, 0));
+    } else {
+      const hairM = DM[o.hairTone || "hair"];
+      const hair = dome(0.11, 0.5, hairM); hair.position.set(0, 0.098, -0.008); hair.scale.set(0.96, 1.1, 1.04); hair.rotation.x = -0.22; head.add(hair);
+      if (o.hair === "bun") head.add(dSph(0.05, hairM, 0, 0.16, -0.1));
+      if (o.hair === "bob") { const bob = dome(0.112, 0.78, hairM); bob.position.set(0, 0.095, -0.03); bob.scale.set(0.98, 1.12, 0.82); bob.rotation.x = -0.5; head.add(bob); }
+    }
+    if (o.mask) { const mk = dSph(0.07, DM.shell, 0, 0.045, 0.062); mk.scale.set(1.05, 0.72, 0.75); head.add(mk);
+      [1, -1].forEach((sx) => head.add(dBox(0.004, 0.006, 0.09, DM.shell, sx * 0.088, 0.07, 0.03))); }
+    return g;
+  }
+
+  // ----- screens -----
+  function strokeGlyph(g, kind, ink) {                                                // drawn in a 256 x 256 box; the first four are the original pad glyphs
+    g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 11; g.lineCap = "round"; g.lineJoin = "round";
     const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); g.stroke(); };
     if (kind === "clipboard") { rr(70, 58, 116, 150, 14); rr(100, 42, 56, 32, 8);
       [[96, 112, 160], [96, 142, 160], [96, 172, 136]].forEach(([x1, y, x2]) => { g.beginPath(); g.moveTo(x1, y); g.lineTo(x2, y); g.stroke(); }); }
     if (kind === "calendar") { rr(56, 66, 144, 132, 14); g.beginPath(); g.moveTo(56, 104); g.lineTo(200, 104); g.stroke();
       [92, 164].forEach((x) => { g.beginPath(); g.moveTo(x, 50); g.lineTo(x, 80); g.stroke(); });
-      g.fillStyle = ink; [[84, 130], [116, 130], [148, 130], [84, 162], [116, 162]].forEach(([x, y]) => g.fillRect(x, y, 22, 18)); }
+      [[84, 130], [116, 130], [148, 130], [84, 162], [116, 162]].forEach(([x, y]) => g.fillRect(x, y, 22, 18)); }
     if (kind === "bed") { g.beginPath(); g.moveTo(50, 90); g.lineTo(50, 190); g.moveTo(50, 160); g.lineTo(206, 160); g.lineTo(206, 190); g.stroke();
       rr(92, 122, 114, 38, 10); g.beginPath(); g.arc(74, 136, 14, 0, Math.PI * 2); g.stroke();
       g.beginPath(); g.moveTo(112, 74); g.lineTo(188, 74); g.moveTo(168, 56); g.lineTo(188, 74); g.lineTo(168, 92); g.stroke(); }
     if (kind === "person") { g.beginPath(); g.arc(104, 96, 28, 0, Math.PI * 2); g.stroke();
       g.beginPath(); g.moveTo(52, 200); g.quadraticCurveTo(52, 140, 104, 140); g.quadraticCurveTo(156, 140, 156, 200); g.stroke();
       rr(150, 52, 64, 46, 12); g.beginPath(); g.moveTo(166, 98); g.lineTo(160, 114); g.lineTo(178, 98); g.stroke(); }
-    const t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding; t.anisotropy = 4; return t;
+    if (kind === "forecast") {                                                        // what has happened, solid; what is expected, dashed
+      g.beginPath(); g.moveTo(48, 60); g.lineTo(48, 198); g.lineTo(212, 198); g.stroke();
+      g.beginPath(); g.moveTo(74, 166); g.lineTo(104, 138); g.lineTo(128, 150); g.lineTo(150, 118); g.stroke();
+      g.setLineDash([4, 19]); g.beginPath(); g.moveTo(150, 118); g.lineTo(198, 72); g.stroke(); g.setLineDash([]);
+      g.beginPath(); g.arc(198, 72, 13, 0, Math.PI * 2); g.fill(); }
+  }
+  // A screen face: the source's mark and two rows. A screen someone is using ends in a send control;
+  // a screen no one is using ends in a timeline of events that fire by themselves. Ink on the layer's own fill; nothing glows.
+  function drawScreen(d, ink, ink3, bg) {
+    const ch = 384, cw = Math.round(ch * d.w / d.h), wide = cw > ch * 1.2;
+    const c = document.createElement("canvas"); c.width = cw; c.height = ch;
+    const g = c.getContext("2d");
+    g.fillStyle = bg; g.fillRect(0, 0, cw, ch);
+    const gs = wide ? ch * 0.86 : Math.min(cw * 0.86, ch * 0.56);
+    g.save(); g.translate(wide ? ch * 0.04 : (cw - gs) / 2, wide ? (ch - gs) / 2 : ch * 0.03); g.scale(gs / 256, gs / 256); strokeGlyph(g, d.glyph, ink); g.restore();
+    const x0 = wide ? gs + ch * 0.1 : cw * 0.14, x1 = cw - (wide ? ch * 0.14 : cw * 0.14), span = x1 - x0;
+    const rowY = wide ? [ch * 0.3, ch * 0.47] : [ch * 0.64, ch * 0.75];
+    g.lineCap = "round"; g.strokeStyle = ink3;
+    rowY.forEach((y, i) => { g.lineWidth = wide ? 15 : 11; g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + span * (i ? 0.62 : 0.9), y); g.stroke(); });
+    const by = wide ? ch * 0.7 : ch * 0.89;
+    if (d.attended) {
+      const bh = wide ? 62 : 44;
+      g.fillStyle = ink; g.beginPath(); g.roundRect ? g.roundRect(x0, by - bh / 2, span, bh, bh / 2) : g.rect(x0, by - bh / 2, span, bh); g.fill();
+      const cx = x0 + span / 2, a = bh * 0.26;
+      g.strokeStyle = bg; g.lineWidth = wide ? 9 : 7; g.lineJoin = "round";
+      g.beginPath(); g.moveTo(cx - a * 1.6, by); g.lineTo(cx + a * 1.4, by); g.moveTo(cx + a * 0.3, by - a); g.lineTo(cx + a * 1.4, by); g.lineTo(cx + a * 0.3, by + a); g.stroke();
+    } else {
+      g.strokeStyle = ink3; g.lineWidth = wide ? 7 : 5; g.beginPath(); g.moveTo(x0, by); g.lineTo(x1, by); g.stroke();
+      g.fillStyle = ink; [0.08, 0.36, 0.58, 0.92].forEach((t) => { g.beginPath(); g.arc(x0 + span * t, by, wide ? 15 : 10, 0, Math.PI * 2); g.fill(); });
+    }
+    const t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding; t.anisotropy = 8; return t;
+  }
+  function flatShape(w, h, r) {                                                       // rounded face with 0..1 texture coordinates
+    const geo = new T.ShapeGeometry(roundedRect(w, h, r), 10);
+    const uv = geo.attributes.uv; for (let k = 0; k < uv.count; k++) uv.setXY(k, uv.getX(k) / w + 0.5, uv.getY(k) / h + 0.5);
+    return geo;
   }
   const tileFaceMats = [];
+  // display: dark glass with a thin border and the drawn face, centred on its own origin, facing +z
+  function display(w, h, glyph, attended) {
+    const g = new T.Group(), b = 0.035;
+    g.add(new T.Mesh(rbox(w + 2 * b, h + 2 * b, 0.05, 0.035), DM.glass));
+    const face = new T.MeshStandardMaterial({ roughness: 0.42, metalness: 0, transparent: true });
+    face.userData = { glyph, w, h, attended: !!attended }; tileFaceMats.push(face);
+    const scr = new T.Mesh(flatShape(w, h, 0.016), face); scr.position.z = 0.027; g.add(scr);
+    return g;
+  }
+  function wallSection(w, h) {
+    const g = new T.Group();
+    g.add(dBox(w, h, 0.12, DM.wall, 0, h / 2, -0.06));
+    g.add(dBox(w + 0.004, 0.1, 0.13, DM.trim, 0, 0.05, -0.058));                         // base
+    g.add(dBox(w + 0.02, 0.035, 0.15, DM.shell, 0, h + 0.017, -0.06));                   // cap
+    g.add(dShadow(w + 0.9, 1.1, 0, 0.1));
+    return g;
+  }
+
+  // Wall touch panel, after the integrated operating room: one large touch display at standing height
+  function makeWallPanel(glyph, attended) {
+    const g = wallSection(1.9, 2.3);
+    g.add(at(display(1.3, 0.78, glyph, attended), 0, 1.47, 0.03));
+    g.add(dBox(0.5, 0.012, 0.03, DM.metal, 0, 1.0, 0.015));                               // ledge
+    return g;
+  }
+  // Kiosk: pedestal with a tilted touch screen below eye level
+  function makeKiosk(glyph) {
+    const g = new T.Group();
+    g.add(at(plate(0.5, 0.46, 0.03, 0.1, DM.trim), 0, 0, 0));
+    g.add(Mx(rbox(0.2, 1.02, 0.11, 0.04), DM.shell, 0, 0.53, -0.04));
+    g.add(dBox(0.14, 0.02, 0.112, DM.glass, 0, 0.82, -0.04));                             // badge reader band
+    const head = display(0.42, 0.56, glyph, true); head.position.set(0, 1.2, 0.02); head.rotation.x = -0.5; g.add(head);
+    g.add(dShadow(1.0, 1.0));
+    return g;
+  }
+  // Wall-arm workstation where orders are entered; shown with no one at it
+  function makeWorkstation(glyph) {
+    const g = wallSection(0.9, 2.3);
+    g.add(dBox(0.14, 0.5, 0.07, DM.shell, 0, 1.28, 0.035));
+    g.add(dBox(0.06, 0.06, 0.34, DM.metal, 0, 1.12, 0.22));
+    g.add(at(plate(0.52, 0.3, 0.035, 0.04, DM.shell), 0, 1.07, 0.42));
+    g.add(dBox(0.36, 0.014, 0.15, DM.trim, 0, 1.112, 0.42));                               // keyboard
+    const d = display(0.56, 0.38, glyph, false); d.position.set(0, 1.56, 0.17); d.rotation.x = -0.12; g.add(d);
+    g.add(dBox(0.05, 0.3, 0.05, DM.metal, 0, 1.42, 0.1));
+    return g;
+  }
+  // Supply alcove with a forecast display. One tote is on the shelf; the dashed tote is the one a forecast will place ahead of need.
+  function makeSupplyAlcove(glyph) {
+    const g = wallSection(1.5, 2.3);
+    g.add(at(display(0.92, 0.52, glyph, false), 0, 1.84, 0.03));
+    [0.62, 1.12].forEach((y) => { g.add(dBox(1.2, 0.03, 0.42, DM.metal, 0, y, 0.21)); });
+    [-0.58, 0.58].forEach((x) => g.add(dBox(0.03, 0.56, 0.42, DM.metal, x, 0.87, 0.21)));
+    const tote = (x, y) => { g.add(at(plate(0.44, 0.32, 0.24, 0.03, DM.cush), x, y, 0.22)); g.add(at(plate(0.46, 0.34, 0.025, 0.03, DM.shell), x, y + 0.24, 0.22)); };
+    tote(-0.28, 0.635); tote(0.28, 0.635); tote(-0.28, 1.135);
+    const ghost = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(0.44, 0.26, 0.32)), conceptLineFine);
+    ghost.computeLineDistances(); ghost.position.set(0.28, 1.135 + 0.13, 0.22); g.add(ghost);
+    return g;
+  }
+
+  // Patient in recovery, sitting up in bed with a tablet. The bed is the Physical layer's bed, built in this layer's materials.
+  function makePatientBed() {
+    const keep = Object.assign({}, PM); Object.assign(PM, DM);
+    const g = makeBed(); Object.assign(PM, keep);
+    g.add(at(plate(0.84, 1.06, 0.15, 0.07, DM.coat), 0, 0.66, 0.43));                     // blanket
+    const legs = dSph(0.3, DM.coat, 0, 0.8, 0.36); legs.scale.set(1.05, 0.26, 1.7); g.add(legs);
+    const prop = dSph(0.2, DM.shell, 0, 0.98, -0.5); prop.scale.set(1.7, 0.75, 0.7); prop.rotation.x = 0.75; g.add(prop);   // second pillow
+    const p = makeRequester({ upper: true, plain: true, build: "f", hair: "bob", hairTone: "metal", top: "shell2", pose: "lap", lean: 0.0 });
+    p.position.set(0, 0.8, -0.14); p.rotation.x = -0.6; g.add(p);
+    g.add(dShadow(1.7, 2.9));
+    return g;
+  }
+
+  const DEM_SCALE = 0.5;     // real-world metres to layer units; a little larger than the Physical layer, since nothing sits above
+  const WHO = {
+    clinician: { build: "f", hair: "cap", mask: true, top: "cloth", pant: "cloth", pose: "touch" },
+    services:  { build: "m", hair: "short", vest: true, lanyard: true, top: "shell2", pant: "interior", pose: "tap" },
+    physician: { build: "f", hair: "bob", coat: true, stetho: true, pose: "phone" },
+    nurse:     { build: "m", hair: "short", stetho: true, pose: "tablet" },
+  };
+  const alone = () => new T.Group();
+  // Two rows, like the Physical layer. Back: fixed points where demand is entered or sent. Front: people asking from wherever they are.
+  // x, z on the layer; yaw of the station; person offset in the station's own frame (metres) and facing.
+  const ZB = -1.45, ZF = 0.85;
+  const DEMAND_ITEMS = [
+    { name: "Clinician at a wall touch panel: transport and bed requests", h: 2.3, x: -3.75, z: ZB, yaw: 0.72,
+      make: () => makeWallPanel("bed", true), who: WHO.clinician, at: [0.62, 0.6], face: Math.PI + 0.3 },
+    { name: "EHR triggers: sent by the system", h: 2.3, x: -1.2, z: ZB, yaw: 0.3, make: () => makeWorkstation("clipboard") },
+    { name: "OR schedule: sent by the system", h: 2.3, x: 0.75, z: ZB, yaw: 0.22, make: () => makeWallPanel("calendar", false) },
+    { name: "Predicted supply positioning: sent ahead of need", h: 2.3, x: 2.95, z: ZB, yaw: 0.12, concept: [1.25, 1.0],
+      make: () => makeSupplyAlcove("forecast") },
+    { name: "Shared services at a kiosk: staff requests", h: 1.8, x: -2.45, z: ZF - 0.15, yaw: 1.08,
+      make: () => makeKiosk("person"), who: WHO.services, at: [0.04, 0.6], face: Math.PI },
+    { name: "Physician on a phone: orders", h: 1.75, x: -0.35, z: ZF, yaw: 0.4, make: alone, who: WHO.physician, at: [0, 0], face: 0 },
+    { name: "Nurse on a tablet: supply and specimen requests", h: 1.8, x: 1.75, z: ZF, yaw: -0.35, make: alone, who: WHO.nurse, at: [0, 0], face: 0 },
+    { name: "Patient in recovery: meal order", h: 1.5, x: 3.95, z: ZF - 0.1, yaw: -0.5, make: makePatientBed },
+  ];
   function buildDemand() {
-    symMats = symSets.demand;
-    const s = slabs.demand, grp = new T.Group(), size = 0.86;
-    DEMAND_ITEMS.forEach((it, i) => {
-      const face = new T.MeshStandardMaterial({ roughness: 0.85, metalness: 0, transparent: true });
-      face.userData.glyph = it.glyph; tileFaceMats.push(face);
-      const geo = new T.ExtrudeGeometry(roundedRect(size, size, 0.12), { depth: 0.05, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2, curveSegments: 8 });
-      // map shape coordinates (-size/2..size/2) onto the texture
-      const uv = geo.attributes.uv; for (let k = 0; k < uv.count; k++) uv.setXY(k, uv.getX(k) / size + 0.5, uv.getY(k) / size + 0.5);
-      const tile = new T.Mesh(geo, [face, symMats.accent]);
-      const x = -3.3 + i * 2.2;
-      tile.position.set(x, s.t / 2 + size / 2 + 0.03, -0.6);
-      tile.rotation.x = -0.18;
-      const foot = part(rbox(0.5, 0.04, 0.3, 0.02), symMats.accent, x, s.t / 2 + 0.02, -0.55);
-      tile.userData.item = it; foot.userData.item = it;
-      grp.add(tile, foot);
-      it.anchor = new T.Vector3(x, s.t / 2 + size + 0.18, -0.6);
+    const s = slabs.demand, grp = new T.Group(), y0 = s.t / 2;
+    DEMAND_ITEMS.forEach((it) => {
+      const st = new T.Group(); st.position.set(it.x, y0, it.z); st.rotation.y = it.yaw; st.scale.setScalar(DEM_SCALE);
+      st.add(it.make());
+      if (it.who) {
+        const who = makeRequester(it.who); who.add(dShadow(0.95, 0.95));
+        who.position.set(it.at[0], 0, it.at[1]); who.rotation.y = it.face; st.add(who);
+      }
+      grp.add(st);
+      if (it.concept) {                                                               // dashed footprint: planned, not yet an existing system
+        const pts = roundedRect(it.concept[0], it.concept[1], 0.14).getPoints(16);
+        const loop = new T.LineLoop(new T.BufferGeometry().setFromPoints(pts.map((p) => new T.Vector3(p.x, 0, -p.y))), conceptLine);
+        loop.computeLineDistances(); loop.position.set(it.x, y0 + 0.006, it.z + 0.12); loop.rotation.y = it.yaw; grp.add(loop);
+        it.fp = loop;
+      }
+      st.traverse((m) => { m.userData.item = it; });
+      it.anchor = new T.Vector3(it.x + (it.who ? 0.2 : 0), y0 + it.h * DEM_SCALE + 0.14, it.z);
     });
     s.group.add(grp); s.items = DEMAND_ITEMS; s.symGroup = grp;
   }
@@ -1050,8 +1309,8 @@
   }
   function applySymbolColors() {
     Object.values(symSets).forEach((m) => { paint(m.body, C.fill); paint(m.accent, C.ink3); });
-    paintPhys();
-    tileFaceMats.forEach((m) => { if (m.map) m.map.dispose(); m.map = drawGlyph(m.userData.glyph, C.ink2, C.fill); m.color.set(0xffffff); m.needsUpdate = true; });
+    paintPhys(); paintDemand();
+    tileFaceMats.forEach((m) => { if (m.map) m.map.dispose(); m.map = drawScreen(m.userData, C.ink2, C.ink3, C.fill); m.color.set(0xffffff); m.needsUpdate = true; });
   }
   buildDemand(); buildPhysical(); applySymbolColors();
 
@@ -1414,7 +1673,8 @@
     edgeObjs.forEach((o) => { if (o.curve) place(o.label, o.curve.getPointAt(0.5)); });
     ["demand", "physical"].forEach((id) => { const o = 0.2 + 0.8 * slabs[id].opacity; symSets[id].body.opacity = symSets[id].accent.opacity = o; });
     { const o = 0.2 + 0.8 * slabs.physical.opacity; Object.values(PM).forEach((m) => { m.opacity = o; if (m !== PM.shadow) m.depthWrite = o > 0.95; }); }
-    tileFaceMats.forEach((m) => { m.opacity = 0.2 + 0.8 * slabs.demand.opacity; });
+    { const o = 0.2 + 0.8 * slabs.demand.opacity; Object.values(DM).forEach((m) => { m.opacity = o; if (m !== DM.shadow) m.depthWrite = o > 0.95; });
+      tileFaceMats.forEach((m) => { m.opacity = o; m.depthWrite = o > 0.95; }); conceptLine.opacity = conceptLineFine.opacity = o; }
     itemLabels.forEach((l) => {
       const s = slabs[l.id], c = s.cur;
       place(l.el, l.it.anchor.clone().add(new T.Vector3(c.x, c.y + c.lift, 0)));
@@ -1433,7 +1693,7 @@
     resetView,
   };
 
-  darkMQ.addEventListener && darkMQ.addEventListener("change", () => { readColors(); applySlabColors(); applyEdgeColors(); applySymbolColors(); });
+  darkMQ.addEventListener && darkMQ.addEventListener("change", () => { readColors(); applyLights(); applySlabColors(); applyEdgeColors(); applySymbolColors(); });
   window.addEventListener("resize", resize);
 
   // One orchestrated moment: the stack opens from closed to its working spacing
