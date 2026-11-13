@@ -580,8 +580,8 @@
   // ---------- Camera settings: edit these values to tune the default view ----------
   const CAMERA = {
     distanceWide: 28,    // windows wider than 1.4:1 (laptops, monitors). Smaller is closer; try 24 to 34.
-    distanceMedium: 33,  // between 1:1 and 1.4:1 (tablets in landscape). Try 28 to 38.
-    distanceTall: 42,    // taller than wide (phones, portrait tablets). Try 36 to 50.
+    distanceMedium: 36,  // between 1:1 and 1.4:1 (tablets in landscape). Try 32 to 42.
+    distanceTall: 52,    // taller than wide (phones, portrait tablets). Try 44 to 60.
     azimuth: 0,          // turn around the stack, in radians. 0 is straight on; 0.62 is about 35°. Try -0.3 to 0.9.
     tilt: 1.37,          // angle down from vertical, in radians. 1.37 looks down about 12°; 1.13 about 25°. Try 1.0 (steeper) to 1.45 (flatter).
     targetY: 0.8,        // height the camera aims at. Raise it to move the stack lower on screen. Try 0 to 2.
@@ -622,13 +622,13 @@
     g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
     return new T.CanvasTexture(c);
   }
-  const ground = new T.Mesh(new T.PlaneGeometry(16, 11),
+  const ground = new T.Mesh(new T.PlaneGeometry(20, 11),
     new T.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false }));
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
   // ---------- Slabs ----------
-  const W = 10, D = 6, LANE_W = 4.9, GAP_X = 0.2;
+  const W = 12.5, D = 6, LANE_W = 6.15, GAP_X = 0.2;
   const THICK = { platform: 0.34, concept: 0.34, existing: 0.5 };
   const R = 0.32, BEVEL = 0.04;
 
@@ -1257,17 +1257,17 @@
   // x, z on the layer; yaw of the station; person offset in the station's own frame (metres) and facing.
   const ZB = -1.45, ZF = 0.85;
   const DEMAND_ITEMS = [
-    { name: "Clinician at a wall touch panel: transport and bed requests", h: 2.3, x: -3.75, z: ZB, yaw: 0.72,
+    { name: "Clinician at a wall touch panel: transport and bed requests", h: 2.3, x: -4.75, z: ZB, yaw: 0.72,
       make: () => makeWallPanel("bed", true), who: WHO.clinician, at: [0.62, 0.6], face: Math.PI + 0.3 },
-    { name: "EHR triggers: sent by the system", h: 2.3, x: -1.2, z: ZB, yaw: 0.3, make: () => makeWorkstation("clipboard") },
-    { name: "OR schedule: sent by the system", h: 2.3, x: 0.75, z: ZB, yaw: 0.22, make: () => makeWallPanel("calendar", false) },
-    { name: "Predicted supply positioning: sent ahead of need", h: 2.3, x: 2.95, z: ZB, yaw: 0.12, concept: [1.25, 1.0],
+    { name: "EHR triggers: sent by the system", h: 2.3, x: -1.55, z: ZB, yaw: 0.3, make: () => makeWorkstation("clipboard") },
+    { name: "OR schedule: sent by the system", h: 2.3, x: 0.95, z: ZB, yaw: 0.22, make: () => makeWallPanel("calendar", false) },
+    { name: "Predicted supply positioning: sent ahead of need", h: 2.3, x: 3.75, z: ZB, yaw: 0.12, concept: [1.25, 1.0],
       make: () => makeSupplyAlcove("forecast") },
-    { name: "Shared services at a kiosk: staff requests", h: 1.8, x: -2.45, z: ZF - 0.15, yaw: 1.08,
+    { name: "Shared services at a kiosk: staff requests", h: 1.8, x: -3.1, z: ZF - 0.15, yaw: 1.08,
       make: () => makeKiosk("person"), who: WHO.services, at: [0.04, 0.6], face: Math.PI },
-    { name: "Physician on a phone: orders", h: 1.75, x: -0.35, z: ZF, yaw: 0.4, make: alone, who: WHO.physician, at: [0, 0], face: 0 },
-    { name: "Nurse on a tablet: supply and specimen requests", h: 1.8, x: 1.75, z: ZF, yaw: -0.35, make: alone, who: WHO.nurse, at: [0, 0], face: 0 },
-    { name: "Patient in recovery: meal order", h: 1.5, x: 3.95, z: ZF - 0.1, yaw: -0.5, make: makePatientBed },
+    { name: "Physician on a phone: orders", h: 1.75, x: -0.45, z: ZF, yaw: 0.4, make: alone, who: WHO.physician, at: [0, 0], face: 0 },
+    { name: "Nurse on a tablet: supply and specimen requests", h: 1.8, x: 2.3, z: ZF, yaw: -0.35, make: alone, who: WHO.nurse, at: [0, 0], face: 0 },
+    { name: "Patient in recovery: meal order", h: 1.5, x: 4.95, z: ZF - 0.1, yaw: -0.5, make: makePatientBed },
   ];
   function buildDemand() {
     const s = slabs.demand, grp = new T.Group(), y0 = s.t / 2;
@@ -1294,7 +1294,7 @@
     symMats = symSets.physical;
     const s = slabs.physical, grp = new T.Group();
     // the back row is drawn slightly smaller so tall fixtures stay clear of the layer above at a low camera angle
-    const ROWS = [{ z: 1.5, x0: -3.9, x1: 3.9, k: 1 }, { z: -0.3, x0: -3.0, x1: 3.0, k: 0.78 }];
+    const ROWS = [{ z: 1.5, x0: -4.9, x1: 4.9, k: 1 }, { z: -0.3, x0: -3.9, x1: 3.9, k: 0.78 }];
     PHYSICAL_ITEMS.forEach((it) => {
       const rowItems = PHYSICAL_ITEMS.filter((p) => p.row === it.row), k = rowItems.indexOf(it), R = ROWS[it.row];
       const x = R.x0 + (R.x1 - R.x0) * (rowItems.length > 1 ? k / (rowItems.length - 1) : 0.5), z = R.z;
@@ -1512,7 +1512,7 @@
     const k = (2 * cam.radius * Math.tan(T.MathUtils.degToRad(camera.fov / 2)) / window.innerHeight) * CAMERA.panSpeed;
     _r.setFromMatrixColumn(camera.matrixWorld, 0); _u.setFromMatrixColumn(camera.matrixWorld, 1);
     lookT.addScaledVector(_r, -dx * k).addScaledVector(_u, dy * k);
-    lookT.set(clamp(lookT.x, -9, 9), clamp(lookT.y, -7, 8), clamp(lookT.z, -9, 9));
+    lookT.set(clamp(lookT.x, -11, 11), clamp(lookT.y, -7, 8), clamp(lookT.z, -9, 9));
   }
 
   function resize() {
